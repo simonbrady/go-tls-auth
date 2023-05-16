@@ -13,7 +13,9 @@ import (
 	"golang.org/x/term"
 )
 
-func die(err error) {
+// Default error handler, declared as a variable so it can be overridden
+// in tests.
+var die = func(err error) {
 	fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 	os.Exit(1)
 }

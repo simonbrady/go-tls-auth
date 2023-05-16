@@ -13,6 +13,9 @@ func TestLoadCertificate(t *testing.T) {
 		"testdata/keyfirst.pem",
 		"testdata/keyfirst_decrypted.pem",
 	} {
+		die = func(err error) {
+			t.Fatalf("failed on %s: %v", filename, err)
+		}
 		cert := loadCert(filename)
 		got := cert.Leaf.Subject.String()
 		if got != want {
