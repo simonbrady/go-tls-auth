@@ -18,6 +18,8 @@ func die(err error) {
 	os.Exit(1)
 }
 
+// Generic wrapper for any function with error as its second return type,
+// so the caller doesn't have to worry about error handling.
 func must[T any](retval T, err error) T {
 	if err != nil {
 		die(err)
@@ -25,13 +27,22 @@ func must[T any](retval T, err error) T {
 	return retval
 }
 
-func getKey(pemBytes []byte) ([]byte, error) {
+// Get password for key decryption, declared as a variable so it can be
+// overridden in tests.
+var getPassword = func() []byte {
+	fmt.Fprintf(os.Stderr, "Password: ")
+	password := must(term.ReadPassword(int(os.Stdin.Fd())))
+	fmt.Fprintf(os.Stderr, "\n")
+	return password
+}
+
+// Scan through the in-memory contents of a PEM file looking for a private
+// key block, then extract it after decrypting it if necessary.
+func extractKey(pemBytes []byte) ([]byte, error) {
 	block, rest := pem.Decode(pemBytes)
 	for block != nil {
 		if block.Type == "ENCRYPTED PRIVATE KEY" {
-			fmt.Fprintf(os.Stderr, "Password: ")
-			password := must(term.ReadPassword(int(os.Stdin.Fd())))
-			fmt.Fprintf(os.Stderr, "\n")
+			password := getPassword()
 			block = &pem.Block{
 				Type:  "PRIVATE KEY",
 				Bytes: must(pemutil.DecryptPKCS8PrivateKey(block.Bytes, password)),
@@ -45,15 +56,18 @@ func getKey(pemBytes []byte) ([]byte, error) {
 	return nil, fmt.Errorf("no private key found")
 }
 
-func getCert(filename string) tls.Certificate {
+// Load a certificate/private key pair from the given PEM file.
+func loadCert(filename string) tls.Certificate {
 	pemFile := must(os.Open(filename))
 	defer pemFile.Close()
 	pemBytes := must(io.ReadAll(pemFile))
-	cert := must(tls.X509KeyPair(pemBytes, must(getKey(pemBytes))))
+	cert := must(tls.X509KeyPair(pemBytes, must(extractKey(pemBytes))))
 	cert.Leaf = must(x509.ParseCertificate(cert.Certificate[0]))
 	return cert
 }
 
+// Return an HTTP client that skips server verification for ease of testing
+// but presents the given client certificate when it connects.
 func getClient(cert tls.Certificate) http.Client {
 	return http.Client{
 		Transport: &http.Transport{
@@ -70,7 +84,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %s <PEM file> <url>\n", os.Args[0])
 		os.Exit(1)
 	}
-	cert := getCert(os.Args[1])
+	cert := loadCert(os.Args[1])
 	url := os.Args[2]
 	client := getClient(cert)
 	resp := must(client.Get(url))
