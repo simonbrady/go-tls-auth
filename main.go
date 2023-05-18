@@ -73,6 +73,7 @@ func loadCert(filename string) tls.Certificate {
 func getClient(cert tls.Certificate) http.Client {
 	return http.Client{
 		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 				Certificates:       []tls.Certificate{cert},
