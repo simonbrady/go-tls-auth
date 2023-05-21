@@ -32,7 +32,7 @@ func must[T any](retval T, err error) T {
 // Get password for key decryption, declared as a variable so it can be
 // overridden in tests.
 var getPassword = func() []byte {
-	fmt.Fprintf(os.Stderr, "Password: ")
+	fmt.Fprintf(os.Stderr, "PEM password: ")
 	password := must(term.ReadPassword(int(os.Stdin.Fd())))
 	fmt.Fprintf(os.Stderr, "\n")
 	return password
@@ -91,6 +91,7 @@ func main() {
 	url := os.Args[2]
 	client := getClient(cert)
 	resp := must(client.Get(url))
+	defer resp.Body.Close()
 	body := must(io.ReadAll(resp.Body))
 	fmt.Fprintf(os.Stderr, "%s\n", resp.Status)
 	fmt.Printf("%s\n", body)
