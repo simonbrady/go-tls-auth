@@ -63,7 +63,7 @@ func startServer(server http.Server, t *testing.T) {
 
 func TestClient(t *testing.T) {
 	die = func(err error) {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	getPassword = dummyPassword
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -81,11 +81,14 @@ func TestClient(t *testing.T) {
 	go startServer(server, t)
 	cert := loadCert("testdata/certfirst.pem")
 	client := getClient(cert)
-	resp := must(client.Get(fmt.Sprintf("https://%s", addr)))
-	defer resp.Body.Close()
+	if resp, err := client.Get(fmt.Sprintf("https://%s", addr)); err != nil {
+		t.Error(err)
+	} else {
+		defer resp.Body.Close()
+	}
 	<-ctx.Done()
 	if ctx.Err() != context.Canceled {
-		t.Errorf("server timed out waiting for client")
+		t.Errorf("no request received from client")
 	}
 	if err := server.Shutdown(context.Background()); err != nil {
 		t.Error(err)
