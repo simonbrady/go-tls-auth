@@ -70,8 +70,8 @@ func loadCert(filename string) tls.Certificate {
 
 // Return an HTTP client that skips server verification for ease of testing
 // but presents the given client certificate when it connects.
-func getClient(cert tls.Certificate) http.Client {
-	return http.Client{
+func getClient(cert tls.Certificate) *http.Client {
+	return &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{

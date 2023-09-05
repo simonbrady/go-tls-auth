@@ -55,7 +55,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func startServer(server http.Server, t *testing.T) {
+func startServer(server *http.Server, t *testing.T) {
 	if err := server.ListenAndServeTLS("testdata/test.crt", "testdata/decrypted.key"); err != http.ErrServerClosed {
 		t.Error(err)
 	}
@@ -68,7 +68,7 @@ func TestClient(t *testing.T) {
 	getPassword = dummyPassword
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	server := http.Server{
+	server := &http.Server{
 		Addr: addr,
 		Handler: handler{
 			Shutdown: cancel,
